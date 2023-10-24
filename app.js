@@ -4,7 +4,24 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 
-// Routers
+// env
+require("dotenv").config();
+
+// use mongoose: connect to mongoDB Atlas
+const mongoose = require("mongoose");
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    //成功的話
+    console.log("Connected to MongoDB.");
+  })
+  .catch((err) => {
+    //也可能不成功的話
+    console.log("Connection Failed.");
+    console.log(err);
+  });
+
+// import routes
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 
