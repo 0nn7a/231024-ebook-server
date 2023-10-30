@@ -76,7 +76,7 @@ router.post("/login", async function (req, res) {
       status: 200,
       meg: "登入成功！",
       data: {
-        ...jwtData,
+        jwt: jwtData,
         avatar: existedUser.avatar,
         username: existedUser.username,
       },
@@ -106,10 +106,71 @@ router.post("/login", async function (req, res) {
 });
 
 // 更新用戶資料
-router.patch("/update/avatar", authToken, async function (req, res) {
-  console.log(req.header("Authorization"));
-  console.log(req.user);
-  res.send({ status: 200, meg: "測試token用" });
+router.put("/update", authToken, async function (req, res) {
+  const updateData = req.body;
+
+  try {
+    // 判斷並留下需要更新的屬性
+    for (let key in updateData) {
+      if (key === "oldPassword") {
+        if (updateData.oldPassword) {
+          // 再次加鹽使用者輸入的修改密碼進行比對
+          const isMatch = await bcrypt.compare(
+            updateData.oldPassword,
+            req.user.password
+          );
+          if (!isMatch) throw new Error("舊密碼輸入錯誤！");
+          updateData.password = await bcrypt.hash(updateData.newPassword, 8);
+          delete updateData.oldPassword;
+        }
+      }
+      if (!updateData[key]) delete updateData[key];
+    }
+
+    console.log("updateData: ", updateData);
+
+    // 查詢並更新使用者
+    const existedUser = await userModel.findOneAndUpdate(
+      { _id: req.user._id },
+      updateData,
+      { new: true, runValidators: true }
+    );
+    console.log("existedUser: ", existedUser);
+    if (!existedUser) throw new Error("個人資料更新失敗，發生異常！");
+
+    // 儲存新建的 JWT 至 MongoDB Atlas 以延長並取得此數據以回傳前端
+    const jwtData = await existedUser.saveNewToken();
+    console.log("jwtData: ", { ...jwtData });
+
+    res.send({
+      status: 200,
+      meg: "個人資料更新成功！",
+      data: {
+        jwt: jwtData,
+        avatar: existedUser.avatar,
+        username: existedUser.username,
+      },
+    });
+  } catch (e) {
+    let status, meg;
+    switch (e.message) {
+      case "舊密碼輸入錯誤！":
+        console.error("舊密碼輸入錯誤！", e);
+        status = 401;
+        meg = e.message;
+        break;
+      default:
+        // 伺服器錯誤：查詢、保存
+        console.error("個人資料更新失敗，發生異常！", e);
+        status = 500;
+        meg = "個人資料更新失敗，發生異常！";
+        break;
+    }
+    res.send({ status, meg });
+  }
 });
+
+// !!! 經過 authToken 這個 middleware 的路由
+// !!! 都能從拿到 req.header("Authorization")、req.user
 
 module.exports = router;

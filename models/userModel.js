@@ -46,6 +46,8 @@ userSchema.pre("save", async function (next) {
   if (user.isModified("password")) {
     // 透過 bcrypt 處理密碼，獲得 hashed password
     user.password = await bcrypt.hash(user.password, 8);
+
+    console.log("password modify!!!");
   }
   next();
 });
@@ -57,8 +59,8 @@ userSchema.methods.saveNewToken = async function () {
   const user = this;
 
   // 製作 Token & Refresh Token
-  const token = makeToken(user, 30);
-  const refreshToken = makeRefToken(user, 60 * 2);
+  const token = makeToken(user, 60 * 5);
+  const refreshToken = makeRefToken(user, 60 * 30);
 
   // 取得 Token 到期時間格式
   const expireTime = new Date(verifyToken(token).exp * 1000).toUTCString();

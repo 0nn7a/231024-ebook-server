@@ -24,7 +24,7 @@ router.post("/refreshToken", async function (req, res) {
     const jwtData = await user.saveNewToken();
     console.log("jwtData: ", { ...jwtData });
 
-    res.send({ status: 200, meg: "ref token", data: jwtData });
+    res.send({ status: 200, meg: "ref token", data: { jwt: jwtData } });
   } catch (e) {
     let status, meg;
     if (e.message === "未找到匹配令牌之用戶！") {
